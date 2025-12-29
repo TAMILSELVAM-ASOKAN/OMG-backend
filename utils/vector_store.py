@@ -27,7 +27,7 @@ def similarity_search(query: str, limit: int = 4):
     SELECT
         content,
         source,
-        1 - (embedding <=> %s::vector) AS score
+        (embedding <=> %s::vector) AS distance
     FROM spiritual_documents
     ORDER BY embedding <=> %s::vector
     LIMIT %s;
@@ -50,7 +50,7 @@ def similarity_search(query: str, limit: int = 4):
         {
             "content": r[0],
             "source": r[1],
-            "score": float(r[2])
+            "score": round(1 - float(r[2]), 4)
         }
         for r in rows
     ]

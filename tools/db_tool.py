@@ -1,7 +1,7 @@
 from utils.postgres_connector import get_db_connection
+from langchain.tools import tool
 
-
-def resolve_temple_fuzzy(temple_name: str, limit: int = 1):
+def resolve_temple_fuzzy(temple_name: str, limit: int = 2):
     """
     Resolve temple using fuzzy matching directly on temples table.
     No alias table is used.
@@ -12,20 +12,28 @@ def resolve_temple_fuzzy(temple_name: str, limit: int = 1):
 
     sql = """
     SELECT
-        id,
-        name,
-        deity,
-        city,
-        state,
-        timings,
-        website,
-        description,
-        history,
-        festivals,
-        amenities,
-        similarity(name, %(q)s) ::float AS confidence
+    id,
+    name,
+    deity,
+    city,
+    state,
+    timings,
+    website,
+    description,
+    history,
+    festivals,
+    amenities,
+    GREATEST(
+        similarity(name, %(q)s),
+        similarity(city, %(q)s),
+        similarity(deity, %(q)s)
+    ) AS score
     FROM temples
-    ORDER BY confidence DESC
+    WHERE
+        similarity(name, %(q)s) > 0.3
+        OR similarity(city, %(q)s) > 0.3
+        OR similarity(deity, %(q)s) > 0.3
+    ORDER BY score DESC
     LIMIT %(limit)s;
     """
 
@@ -55,3 +63,8 @@ def resolve_temple_fuzzy(temple_name: str, limit: int = 1):
                 })
 
             return results
+
+@tool
+def temple_db_tool(temple_name: str) -> str:
+    """Fetch verified temple details and timings from database."""
+    return resolve_temple_fuzzy(temple_name)
